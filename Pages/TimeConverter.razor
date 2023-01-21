@@ -1,0 +1,111 @@
+﻿@page "/timeconverter"
+@using System.ComponentModel.DataAnnotations
+@inject IClipboardService ClipboardService
+@inject IConvertTimeService ConvertTimeService
+
+<MudStack>
+
+    <MudText Typo="Typo.h3">Time Converter</MudText>
+
+    <EditForm Model="@model" OnValidSubmit="OnValidSubmit">
+        <DataAnnotationsValidator />
+        <MudPaper Class="pa-4">
+            <MudCard>
+                <MudCardContent>
+                    <MudGrid Justify="Justify.Center">
+                        <MudItem xs="12">
+                            <MudStack Row="true">
+                                <MudDatePicker PickerVariant="PickerVariant.Dialog"
+                                               Label="Date" @bind-Date="model.Date" AutoClose="true" />
+                                <MudTimePicker PickerVariant="PickerVariant.Dialog"
+                                               Label="Time" AmPm="true" @bind-Time="model.Time" AutoClose="true" />
+
+                            </MudStack>
+                        </MudItem>
+                        <MudItem xs="12" Class="d-flex align-center justify-center mud-width-full">
+                            <MudRadioGroup @bind-SelectedOption="@SelectedOption">
+                                <MudRadio Option="TimeFormat.PST" Color="Color.Primary">PST</MudRadio>
+                                <MudRadio Option="TimeFormat.EST" Color="Color.Primary">EST</MudRadio>
+                                <MudRadio Option="TimeFormat.GMT2" Color="Color.Primary">GMT +2</MudRadio>
+                                <MudRadio Option="TimeFormat.UTC" Color="Color.Primary">UTC +4</MudRadio>
+                                <MudRadio Option="TimeFormat.GMT7" Color="Color.Primary">GMT +7</MudRadio>
+                                <MudRadio Option="TimeFormat.GMT8" Color="Color.Primary">GMT +8</MudRadio>
+                            </MudRadioGroup>
+                        </MudItem>
+                    </MudGrid>
+
+
+                </MudCardContent>
+                <MudCardActions>
+                    <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" FullWidth=true Color="Color.Primary" Class="ml-auto">Convert</MudButton>
+
+                </MudCardActions>
+            </MudCard>
+            <MudCard Class="mt-10">
+
+                <MudCardContent>
+                    <MudTextField T="string" Label="Output" Variant="Variant.Text" Text="@outputText" Lines="5" />
+                </MudCardContent>
+                <MudCardActions>
+                    <MudButton OnClick="OnCopyTimeOutputText" Variant="Variant.Filled" FullWidth=true Color="Color.Primary" Class="ml-auto">Copy</MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudPaper>
+    </EditForm>
+</MudStack>
+
+
+@code {
+
+    string outputText = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
+    string? debug { get; set; }
+    Model model = new Model();
+    public TimeFormat SelectedOption { get; set; } = TimeFormat.PST;
+
+    public class Model
+    {
+        [Required]
+        public DateTime? Date { get; set; } = DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Unspecified);
+
+        [Required]
+        public TimeSpan? Time { get; set; } = TimeSpan.Zero;
+
+    }
+
+    private void OnValidSubmit(EditContext context)
+    {
+        //Cast
+        DateTime date = model.Date ?? DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Unspecified);
+        TimeSpan time = model.Time ?? TimeSpan.MinValue;
+
+        //Add
+        date.AddTicks(time.Ticks);
+
+        //Convert
+        ConvertTimeService.ConvertTimeFormat(date, SelectedOption);
+
+        //Write
+        outputText = $"PST\t: {ConvertTimeService.PSTFormat.ToString("F")}\r\n"
+                    + $"EST\t: {ConvertTimeService.ESTFormat.ToString("F")}\r\n"
+                    + $"GMT +2\t: {ConvertTimeService.GMT2Format.ToString("F")}\r\n"
+                    + $"UTC\t: {ConvertTimeService.UTCFormat.ToString("F")}\r\n"
+                    + $"GMT +7\t: {ConvertTimeService.GMT7Format.ToString("F")}\r\n"
+                    + $"GMT +8\t: {ConvertTimeService.GMT8Format.ToString("F")}\r\n";
+        
+        StateHasChanged();
+    }
+
+    private async void OnCopyTimeOutputText()
+    {
+        // Writing to the clipboard may be denied, so you must handle the exception
+        try
+        {
+            await ClipboardService.WriteTextAsync(outputText);
+        }
+        catch
+        {
+            Console.WriteLine("Cannot write text to clipboard");
+        }
+    }
+
+}
